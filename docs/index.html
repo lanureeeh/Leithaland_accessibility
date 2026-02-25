@@ -275,6 +275,15 @@
       html += '<i style="background:' + colors[i] + ';width:18px;height:12px;display:inline-block;margin-right:4px;"></i> ' +
         breaks[i] + (breaks[i + 1] === 999 ? '+' : '–' + breaks[i + 1]) + '<br>';
     }
+    html += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid #ccc;">';
+    html += '<strong>Networks</strong><br>';
+    html += '<i style="background:#2196F3;width:24px;height:3px;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Walk network<br>';
+    html += '<i style="background:#4CAF50;width:24px;height:3px;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Bike network<br>';
+    html += '<strong style="margin-top:6px;display:block;">Destinations</strong>';
+    html += '<i style="background:#9C27B0;border:1px solid #333;width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Public Transit Stops<br>';
+    html += '<i style="background:#FF9800;border:1px solid #333;width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Kindergarden<br>';
+    html += '<i style="background:#00BCD4;border:1px solid #333;width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Schools';
+    html += '</div>';
     legendDiv.innerHTML = html;
   }
 
