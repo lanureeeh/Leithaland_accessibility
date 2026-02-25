@@ -1,6 +1,6 @@
 # Leithaland Accessibility Map
 
-Interactive map of travel times to PT stops, schools, and kindergartens by walking and cycling in the Leithaland KLAR! region (Austria).
+Interactive map of travel times to Public Transit Stops, schools, and kindergartens by walking and cycling in the Leithaland KLAR! region (Austria).
 
 ## Live map
 

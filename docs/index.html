@@ -80,7 +80,7 @@
 </head>
 <body>
 <div id="map" role="application" aria-label="Leithaland Accessibility Map">
-  <div class="sr-only">Interactive accessibility map for walking and cycling to PT stops, schools, and kindergartens in Leithaland KLAR! region.</div>
+  <div class="sr-only">Interactive accessibility map for walking and cycling to Public Transit Stops, schools, and kindergartens in Leithaland KLAR! region.</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -168,7 +168,10 @@
               var props = feature.properties || {};
               var ttVal = props.travel_time_min != null ? props.travel_time_min : props.travel_time;
               var tt = ttVal != null ? parseFloat(ttVal).toFixed(1) : '—';
-              layer.bindPopup('<strong>' + id.replace('_', ' → ') + '</strong><br>Travel time: <strong>' + tt + ' min</strong>');
+              var labels = { pt_stops: 'Public Transit Stops', schools: 'Schools', kindergarden: 'Kindergarden' };
+              var parts = id.split('_');
+              var label = (parts[0] === 'walk' ? 'Walk' : 'Bike') + ' → ' + (labels[parts.slice(1).join('_')] || parts.slice(1).join(' '));
+              layer.bindPopup('<strong>' + label + '</strong><br>Travel time: <strong>' + tt + ' min</strong>');
             }
           });
           resolve(layer);
@@ -283,10 +286,10 @@
     var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded');
     div.innerHTML = `
       <div class="section-title">Accessibility (travel time to nearest)</div>
-      <label><input type="radio" name="acc" id="acc-walk-pt"> Walk → PT stops</label>
+      <label><input type="radio" name="acc" id="acc-walk-pt"> Walk → Public Transit Stops</label>
       <label><input type="radio" name="acc" id="acc-walk-schools"> Walk → Schools</label>
       <label><input type="radio" name="acc" id="acc-walk-kindergarden"> Walk → Kindergarden</label>
-      <label><input type="radio" name="acc" id="acc-bike-pt"> Bike → PT stops</label>
+      <label><input type="radio" name="acc" id="acc-bike-pt"> Bike → Public Transit Stops</label>
       <label><input type="radio" name="acc" id="acc-bike-schools"> Bike → Schools</label>
       <label><input type="radio" name="acc" id="acc-bike-kindergarden"> Bike → Kindergarden</label>
       <div class="layer-divider"></div>
@@ -295,7 +298,7 @@
       <label><input type="checkbox" id="bike-net"> Bike network</label>
       <div class="layer-divider"></div>
       <div class="section-title">Destinations</div>
-      <label><input type="checkbox" id="pt-layer" checked> PT stops</label>
+      <label><input type="checkbox" id="pt-layer" checked> Public Transit Stops</label>
       <label><input type="checkbox" id="kg-layer"> Kindergartens</label>
       <label><input type="checkbox" id="school-layer"> Schools</label>
       <div class="layer-divider"></div>
@@ -400,7 +403,7 @@
       <button class="info-toggle" tabindex="0">↑ Info</button>
       <div class="info-content">
         <h4>Leithaland Accessibility Map</h4>
-        <p>Travel time to nearest destinations (PT stops, schools, kindergartens) by walking and cycling. Darker red = longer travel time.</p>
+        <p>Travel time to nearest destinations (Public Transit Stops, schools, kindergartens) by walking and cycling. Darker red = longer travel time.</p>
         <p>Use the layer control to switch between modes and destination types. Click grid cells for exact travel time.</p>
       </div>
     `;
