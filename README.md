@@ -4,7 +4,7 @@ Interactive map of travel times to PT stops, schools, and kindergartens by walki
 
 ## Live map
 
-After deployment: **https://[YOUR_USERNAME].github.io/Leithaland/**
+**https://lanureeeh.github.io/Leithaland_accessibility/**
 
 ## Local development
 
@@ -22,13 +22,12 @@ After deployment: **https://[YOUR_USERNAME].github.io/Leithaland/**
 
 ## Deploying to GitHub Pages
 
-1. Create a new repository on GitHub named `Leithaland` (or any name).
-2. Push this repo:
+1. Push this repo (if not already done):
    ```bash
-   git remote add origin https://github.com/YOUR_USERNAME/Leithaland.git
+   git remote add origin https://github.com/lanureeeh/Leithaland_accessibility.git
    git push -u origin main
    ```
 3. On GitHub: **Settings** → **Pages** → **Source**: Deploy from branch → `main` → `/docs` → Save.
-4. The site will be at `https://YOUR_USERNAME.github.io/Leithaland/`.
+4. The site will be at https://lanureeeh.github.io/Leithaland_accessibility/
 
 **Updating the map:** Run `python scripts/convert_gpkg_to_geojson.py`, then `bash scripts/update_docs_for_github_pages.sh`, commit and push.
