@@ -245,7 +245,7 @@
     .then(r => r.json())
     .then(function(geojson) {
       boundaryLayer = L.geoJSON(geojson, {
-        style: { pane: 'boundaryPane', color: '#333', weight: 2, fillColor: '#fff', fillOpacity: 0.1 }
+        style: { pane: 'boundaryPane', color: '#333', weight: 2, fillColor: '#fff', fillOpacity: 0.1, dashArray: '10, 5, 2, 5' }
       });
       map.addLayer(boundaryLayer);
       leithalandBounds = boundaryLayer.getBounds();
