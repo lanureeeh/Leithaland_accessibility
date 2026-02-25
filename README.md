@@ -4,7 +4,7 @@ Interactive map of travel times to PT stops, schools, and kindergartens by walki
 
 ## Live map
 
-**https://[YOUR_USERNAME].github.io/Leithaland/**
+After deployment: **https://[YOUR_USERNAME].github.io/Leithaland/**
 
 ## Local development
 
@@ -22,10 +22,13 @@ Interactive map of travel times to PT stops, schools, and kindergartens by walki
 
 ## Deploying to GitHub Pages
 
-1. Push this repo to GitHub.
-2. Go to **Settings** → **Pages**.
-3. Under **Source**, select **Deploy from a branch**.
-4. Branch: `main`, Folder: `/docs`.
-5. Save. The site will be at `https://YOUR_USERNAME.github.io/Leithaland/`.
+1. Create a new repository on GitHub named `Leithaland` (or any name).
+2. Push this repo:
+   ```bash
+   git remote add origin https://github.com/YOUR_USERNAME/Leithaland.git
+   git push -u origin main
+   ```
+3. On GitHub: **Settings** → **Pages** → **Source**: Deploy from branch → `main` → `/docs` → Save.
+4. The site will be at `https://YOUR_USERNAME.github.io/Leithaland/`.
 
-After updating data, re-run the conversion script, copy the new GeoJSON files to `docs/data/`, then commit and push.
+**Updating the map:** Run `python scripts/convert_gpkg_to_geojson.py`, then `bash scripts/update_docs_for_github_pages.sh`, commit and push.

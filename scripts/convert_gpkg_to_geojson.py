@@ -150,6 +150,7 @@ def main() -> None:
     print("\nBoundary:")
     convert_boundary()
     print("\nDone.")
+    print("To update GitHub Pages: run scripts/update_docs_for_github_pages.sh")
 
 
 if __name__ == "__main__":
