@@ -97,9 +97,9 @@
   // Walking: 0-5, 5-10, 10-15, 15-20, 20-30, 30+
   const WALK_BREAKS = [0, 5, 10, 15, 20, 30, 999];
   const WALK_COLORS = ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026', '#800026'];
-  // Cycling: 0-5, 5-10, 10-15, 15-25, 25-40, 40+
-  const BIKE_BREAKS = [0, 5, 10, 15, 25, 40, 999];
-  const BIKE_COLORS = ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026', '#800026'];
+  // Cycling: 0-2, 2-4, 4-10, 10-15, 15+
+  const BIKE_BREAKS = [0, 2, 4, 10, 15, 999];
+  const BIKE_COLORS = ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#800026'];
 
   function getColor(val, breaks, colors) {
     if (val == null || isNaN(val)) return '#cccccc';
@@ -124,6 +124,8 @@
     maxZoom: MAP_MAX_ZOOM,
     layers: [baseLayer]
   });
+  map.createPane('networksPane');
+  map.getPane('networksPane').style.zIndex = 410;
   map.createPane('boundaryPane');
   map.getPane('boundaryPane').style.zIndex = 425;
   map.createPane('destinationsPane');
@@ -232,9 +234,9 @@
   });
 
   // Load overlay layers
-  loadLineLayer('data/walk_network.geojson', { color: '#2196F3', weight: 2, opacity: 0.6 })
+  loadLineLayer('data/walk_network.geojson', { pane: 'networksPane', color: '#2196F3', weight: 2, opacity: 0.6 })
     .then(function(l) { walkNetworkLayer = l; });
-  loadLineLayer('data/bike_network.geojson', { color: '#4CAF50', weight: 2, opacity: 0.6 })
+  loadLineLayer('data/bike_network.geojson', { pane: 'networksPane', color: '#4CAF50', weight: 2, opacity: 0.6 })
     .then(function(l) { bikeNetworkLayer = l; });
   loadPointLayer('data/pt_stops.geojson', '#9C27B0', 4).then(function(l) { ptStopsLayer = l; });
   loadPointLayer('data/kindergartens.geojson', '#FF9800', 6).then(function(l) { kindergartensLayer = l; });
