@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Leithaland Accessibility Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+    .legend {
+      background: white;
+      padding: 8px 12px;
+      line-height: 1.3em;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+    .leaflet-control-layers {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 6px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+      font-size: 0.9em;
+      padding: 4px 6px;
+    }
+    .leaflet-control-layers-expanded {
+      padding: 8px;
+      min-width: 260px;
+    }
+    .leaflet-control-layers label {
+      margin: 1px 0;
+      padding: 2px;
+      line-height: 1.2;
+      cursor: pointer;
+    }
+    .layer-divider {
+      height: 1px;
+      background-color: #ddd;
+      margin: 8px 0;
+      width: 100%;
+    }
+    .section-title {
+      font-weight: bold;
+      font-size: 12px;
+      color: #555;
+      text-transform: uppercase;
+      margin: 6px 0 4px 0;
+    }
+    .leaflet-popup-content { font-size: 14px; }
+    .info {
+      padding: 6px 8px;
+      font: 14px/16px Arial, Helvetica, sans-serif;
+      background: white;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      border-radius: 5px;
+    }
+    .info h4 { margin: 0 0 5px; color: #333; }
+    .info-toggle {
+      cursor: pointer;
+      color: #0078A8;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      padding: 0;
+      font: inherit;
+      margin: 0;
+    }
+    .info-content { display: none; margin-top: 10px; }
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      border: 0;
+    }
+  </style>
+</head>
+<body>
+<div id="map" role="application" aria-label="Leithaland Accessibility Map">
+  <div class="sr-only">Interactive accessibility map for walking and cycling to PT stops, schools, and kindergartens in Leithaland KLAR! region.</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+<script>
+  // Leithaland approximate center (Burgenland / Lower Austria)
+  const MAP_CENTER = [47.85, 16.15];
+  const MAP_ZOOM = 11;
+  const MAP_MIN_ZOOM = 9;
+  const MAP_MAX_ZOOM = 18;
+
+  // Travel time color scales (yellow = good, red = poor)
+  // Walking: 0-5, 5-10, 10-15, 15-20, 20-30, 30+
+  const WALK_BREAKS = [0, 5, 10, 15, 20, 30, 999];
+  const WALK_COLORS = ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026', '#800026'];
+  // Cycling: 0-5, 5-10, 10-15, 15-25, 25-40, 40+
+  const BIKE_BREAKS = [0, 5, 10, 15, 25, 40, 999];
+  const BIKE_COLORS = ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026', '#800026'];
+
+  function getColor(val, breaks, colors) {
+    if (val == null || isNaN(val)) return '#cccccc';
+    for (let i = 0; i < breaks.length - 1; i++) {
+      if (val >= breaks[i] && val < breaks[i + 1]) return colors[i];
+    }
+    return colors[colors.length - 1];
+  }
+
+  // Base map: Carto Positron
+  var baseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20,
+    zIndex: 1
+  });
+
+  var map = L.map('map', {
+    center: MAP_CENTER,
+    zoom: MAP_ZOOM,
+    minZoom: MAP_MIN_ZOOM,
+    maxZoom: MAP_MAX_ZOOM,
+    layers: [baseLayer]
+  });
+  map.createPane('boundaryPane');
+  map.getPane('boundaryPane').style.zIndex = 425;
+  map.createPane('destinationsPane');
+  map.getPane('destinationsPane').style.zIndex = 450;
+
+  // Store layer groups and GeoJSON layers
+  var accessibilityLayers = {};
+  var accessibilityLayerIds = [
+    'walk_pt_stops', 'walk_schools', 'walk_kindergarden',
+    'bike_pt_stops', 'bike_schools', 'bike_kindergarden'
+  ];
+  var currentAccessibilityLayer = null;
+
+  var walkNetworkLayer = null;
+  var bikeNetworkLayer = null;
+  var ptStopsLayer = null;
+  var kindergartensLayer = null;
+  var schoolsLayer = null;
+  var boundaryLayer = null;
+
+  // Load GeoJSON and create styled layer
+  function loadAccessibilityLayer(id) {
+    return new Promise(function(resolve, reject) {
+      var isWalk = id.startsWith('walk_');
+      var breaks = isWalk ? WALK_BREAKS : BIKE_BREAKS;
+      var colors = isWalk ? WALK_COLORS : BIKE_COLORS;
+
+      fetch('data/' + id + '.geojson')
+        .then(r => r.json())
+        .then(function(geojson) {
+          var layer = L.geoJSON(geojson, {
+            style: function(feature) {
+              var p = feature.properties || {};
+              var tt = p.travel_time_min != null ? p.travel_time_min : p.travel_time;
+              return {
+                fillColor: getColor(tt, breaks, colors),
+                fillOpacity: 0.65,
+                weight: 0
+              };
+            },
+            onEachFeature: function(feature, layer) {
+              var props = feature.properties || {};
+              var ttVal = props.travel_time_min != null ? props.travel_time_min : props.travel_time;
+              var tt = ttVal != null ? parseFloat(ttVal).toFixed(1) : '—';
+              layer.bindPopup('<strong>' + id.replace('_', ' → ') + '</strong><br>Travel time: <strong>' + tt + ' min</strong>');
+            }
+          });
+          resolve(layer);
+        })
+        .catch(reject);
+    });
+  }
+
+  function loadLineLayer(path, style) {
+    return fetch(path)
+      .then(r => r.json())
+      .then(function(geojson) {
+        return L.geoJSON(geojson, {
+          style: style || { color: '#333', weight: 2, opacity: 0.7 }
+        });
+      })
+      .catch(function() { return L.layerGroup(); });
+  }
+
+  function loadPointLayer(path, color, iconRadius) {
+    return fetch(path)
+      .then(r => r.json())
+      .then(function(geojson) {
+        return L.geoJSON(geojson, {
+          pointToLayer: function(feature, latlng) {
+            return L.circleMarker(latlng, {
+              pane: 'destinationsPane',
+              radius: iconRadius || 5,
+              fillColor: color,
+              color: '#333',
+              weight: 1,
+              fillOpacity: 0.8
+            });
+          },
+          onEachFeature: function(feature, layer) {
+            var props = feature.properties || {};
+            var name = props.name || props.NAME || props.name_de || props.id || '—';
+            layer.bindPopup('<strong>' + name + '</strong>');
+          }
+        });
+      })
+      .catch(function() { return L.layerGroup(); });
+  }
+
+  // Preload all accessibility layers
+  Promise.all(accessibilityLayerIds.map(function(id) {
+    return loadAccessibilityLayer(id).then(function(layer) {
+      accessibilityLayers[id] = layer;
+    });
+  })).then(function() {
+    // Set initial layer
+    var initialId = 'walk_pt_stops';
+    currentAccessibilityLayer = accessibilityLayers[initialId];
+    if (currentAccessibilityLayer) map.addLayer(currentAccessibilityLayer);
+    document.getElementById('acc-walk-pt').checked = true;
+  }).catch(function(e) {
+    console.error('Failed to load accessibility layers. Run: python scripts/convert_gpkg_to_geojson.py', e);
+  });
+
+  // Load overlay layers
+  loadLineLayer('data/walk_network.geojson', { color: '#2196F3', weight: 2, opacity: 0.6 })
+    .then(function(l) { walkNetworkLayer = l; });
+  loadLineLayer('data/bike_network.geojson', { color: '#4CAF50', weight: 2, opacity: 0.6 })
+    .then(function(l) { bikeNetworkLayer = l; });
+  loadPointLayer('data/pt_stops.geojson', '#9C27B0', 4).then(function(l) { ptStopsLayer = l; });
+  loadPointLayer('data/kindergartens.geojson', '#FF9800', 6).then(function(l) { kindergartensLayer = l; });
+  loadPointLayer('data/schools.geojson', '#00BCD4', 6).then(function(l) { schoolsLayer = l; });
+  fetch('data/boundary.geojson')
+    .then(r => r.json())
+    .then(function(geojson) {
+      boundaryLayer = L.geoJSON(geojson, {
+        style: { pane: 'boundaryPane', color: '#333', weight: 2, fillColor: '#fff', fillOpacity: 0.1 }
+      });
+      map.addLayer(boundaryLayer);
+      leithalandBounds = boundaryLayer.getBounds();
+      map.fitBounds(leithalandBounds, { padding: [5, 5], maxZoom: 14 });
+    }).catch(function() {});
+
+  // Legend
+  var legendDiv = null;
+  var legend = L.control({ position: 'bottomright' });
+  legend.onAdd = function() {
+    legendDiv = L.DomUtil.create('div', 'legend');
+    updateLegendContent();
+    return legendDiv;
+  };
+  legend.addTo(map);
+
+  function updateLegendContent() {
+    if (!legendDiv) return;
+    var isWalk = currentAccessibilityLayer && Object.keys(accessibilityLayers).some(function(k) {
+      return accessibilityLayers[k] === currentAccessibilityLayer && k.startsWith('walk_');
+    });
+    var breaks = isWalk ? WALK_BREAKS : BIKE_BREAKS;
+    var colors = isWalk ? WALK_COLORS : BIKE_COLORS;
+    var mode = isWalk ? 'Walking' : 'Cycling';
+    var html = '<strong>Travel time (min) – ' + mode + '</strong><br>';
+    for (var i = 0; i < breaks.length - 1; i++) {
+      html += '<i style="background:' + colors[i] + ';width:18px;height:12px;display:inline-block;margin-right:4px;"></i> ' +
+        breaks[i] + (breaks[i + 1] === 999 ? '+' : '–' + breaks[i + 1]) + '<br>';
+    }
+    legendDiv.innerHTML = html;
+  }
+
+  function updateLegend() {
+    updateLegendContent();
+  }
+
+  // Custom layer control
+  var customLayerControl = L.control({ position: 'topright' });
+  customLayerControl.onAdd = function() {
+    var div = L.DomUtil.create('div', 'leaflet-control-layers leaflet-control-layers-expanded');
+    div.innerHTML = `
+      <div class="section-title">Accessibility (travel time to nearest)</div>
+      <label><input type="radio" name="acc" id="acc-walk-pt"> Walk → PT stops</label>
+      <label><input type="radio" name="acc" id="acc-walk-schools"> Walk → Schools</label>
+      <label><input type="radio" name="acc" id="acc-walk-kindergarden"> Walk → Kindergarden</label>
+      <label><input type="radio" name="acc" id="acc-bike-pt"> Bike → PT stops</label>
+      <label><input type="radio" name="acc" id="acc-bike-schools"> Bike → Schools</label>
+      <label><input type="radio" name="acc" id="acc-bike-kindergarden"> Bike → Kindergarden</label>
+      <div class="layer-divider"></div>
+      <div class="section-title">Networks</div>
+      <label><input type="checkbox" id="walk-net"> Walk network</label>
+      <label><input type="checkbox" id="bike-net"> Bike network</label>
+      <div class="layer-divider"></div>
+      <div class="section-title">Destinations</div>
+      <label><input type="checkbox" id="pt-layer" checked> PT stops</label>
+      <label><input type="checkbox" id="kg-layer"> Kindergartens</label>
+      <label><input type="checkbox" id="school-layer"> Schools</label>
+      <div class="layer-divider"></div>
+      <label><input type="checkbox" id="bound-layer" checked> Leithaland boundaries</label>
+    `;
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  customLayerControl.addTo(map);
+
+  // Wire up accessibility radio buttons
+  setTimeout(function() {
+    var accIds = ['walk_pt_stops', 'walk_schools', 'walk_kindergarden', 'bike_pt_stops', 'bike_schools', 'bike_kindergarden'];
+    var radioIds = ['acc-walk-pt', 'acc-walk-schools', 'acc-walk-kindergarden', 'acc-bike-pt', 'acc-bike-schools', 'acc-bike-kindergarden'];
+    radioIds.forEach(function(rid, i) {
+      var r = document.getElementById(rid);
+      if (r) r.addEventListener('change', function() {
+        if (!this.checked) return;
+        var lid = accIds[i];
+        var newLayer = accessibilityLayers[lid];
+        if (newLayer && currentAccessibilityLayer !== newLayer) {
+          if (currentAccessibilityLayer) map.removeLayer(currentAccessibilityLayer);
+          currentAccessibilityLayer = newLayer;
+          map.addLayer(currentAccessibilityLayer);
+          updateLegend();
+        }
+      });
+    });
+
+    document.getElementById('walk-net').addEventListener('change', function() {
+      if (walkNetworkLayer) this.checked ? map.addLayer(walkNetworkLayer) : map.removeLayer(walkNetworkLayer);
+    });
+    document.getElementById('bike-net').addEventListener('change', function() {
+      if (bikeNetworkLayer) this.checked ? map.addLayer(bikeNetworkLayer) : map.removeLayer(bikeNetworkLayer);
+    });
+    document.getElementById('pt-layer').addEventListener('change', function() {
+      if (ptStopsLayer) this.checked ? map.addLayer(ptStopsLayer) : map.removeLayer(ptStopsLayer);
+    });
+    document.getElementById('kg-layer').addEventListener('change', function() {
+      if (kindergartensLayer) this.checked ? map.addLayer(kindergartensLayer) : map.removeLayer(kindergartensLayer);
+    });
+    document.getElementById('school-layer').addEventListener('change', function() {
+      if (schoolsLayer) this.checked ? map.addLayer(schoolsLayer) : map.removeLayer(schoolsLayer);
+    });
+    document.getElementById('bound-layer').addEventListener('change', function() {
+      if (boundaryLayer) this.checked ? map.addLayer(boundaryLayer) : map.removeLayer(boundaryLayer);
+    });
+  }, 500);
+
+  function bringDestinationsToFront() {
+    [ptStopsLayer, kindergartensLayer, schoolsLayer].forEach(function(l) {
+      if (l && map.hasLayer(l)) l.bringToFront();
+    });
+  }
+
+  map.on('overlayadd', bringDestinationsToFront);
+
+  // Add default overlays after a short delay (allow fetch to complete)
+  setTimeout(function() {
+    if (ptStopsLayer) {
+      map.addLayer(ptStopsLayer);
+      bringDestinationsToFront();
+    }
+  }, 800);
+
+  // Geocoder
+  var geocoder = L.Control.geocoder({
+    defaultMarkGeocode: false,
+    position: 'topleft',
+    collapsed: true,
+    placeholder: 'Ort suchen...',
+    geocoder: new L.Control.Geocoder.Nominatim({
+      geocodingQueryParams: { countrycodes: 'at', viewbox: '15.5,46.8,17.2,48.0', bounded: 1 }
+    })
+  }).addTo(map);
+  geocoder.on('markgeocode', function(e) {
+    map.fitBounds(e.geocode.bbox);
+  });
+
+  var leithalandBounds = null;
+  var zoomToLeithalandControl = L.control({ position: 'topleft' });
+  zoomToLeithalandControl.onAdd = function() {
+    var btn = L.DomUtil.create('button', 'leaflet-control-zoom leaflet-bar');
+    btn.innerHTML = 'Zoom to Leithaland';
+    btn.title = 'Zoom to Leithaland boundaries';
+    btn.style.cssText = 'width:auto;padding:6px 10px;font-size:12px;cursor:pointer;';
+    L.DomEvent.on(btn, 'click', function(e) {
+      L.DomEvent.stopPropagation(e);
+      if (leithalandBounds) {
+        map.fitBounds(leithalandBounds, { padding: [5, 5], maxZoom: 14 });
+      }
+    });
+    return btn;
+  };
+  zoomToLeithalandControl.addTo(map);
+
+  // Info panel
+  var infoContainer = L.control({ position: 'bottomleft' });
+  infoContainer.onAdd = function() {
+    var div = L.DomUtil.create('div', 'info');
+    div.innerHTML = `
+      <button class="info-toggle" tabindex="0">↑ Info</button>
+      <div class="info-content">
+        <h4>Leithaland Accessibility Map</h4>
+        <p>Travel time to nearest destinations (PT stops, schools, kindergartens) by walking and cycling. Darker red = longer travel time.</p>
+        <p>Use the layer control to switch between modes and destination types. Click grid cells for exact travel time.</p>
+      </div>
+    `;
+    var toggle = div.querySelector('.info-toggle');
+    var content = div.querySelector('.info-content');
+    toggle.addEventListener('click', function() {
+      var show = content.style.display !== 'block';
+      content.style.display = show ? 'block' : 'none';
+      toggle.textContent = show ? '↓ Info' : '↑ Info';
+    });
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  infoContainer.addTo(map);
+
+  map.keyboard.enable();
+</script>
+</body>
+</html>
