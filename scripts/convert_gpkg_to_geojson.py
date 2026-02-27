@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Convert GeoPackage layers to GeoJSON for Leaflet web map.
-Run from Leithaland project root: python scripts/convert_gpkg_to_geojson.py
+Convert GeoPackage layers to GeoJSON for the accessibility map.
+Run from project root: python scripts/convert_gpkg_to_geojson.py
+
+Output: docs/data/*.geojson (used by GitHub Pages and local development)
 """
 
-import json
-import os
 from pathlib import Path
 
 try:
@@ -16,7 +16,7 @@ except ImportError:
 
 # Project root (parent of scripts/)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-OUT_DIR = PROJECT_ROOT / "leaflet" / "leithaland-accessibility-map" / "data"
+OUT_DIR = PROJECT_ROOT / "docs" / "data"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -32,42 +32,42 @@ def to_geojson(gdf: "gpd.GeoDataFrame", out_path: Path) -> None:
 
 def convert_gridded() -> None:
     """Convert gridded accessibility layers (polygons with travel_time_min)."""
-    gridded_dir = PROJECT_ROOT / "results" / "gridded" / "unbuffered"
+    gridded_dir = PROJECT_ROOT / "results" / "grids" / "no_buffers"
     if not gridded_dir.exists():
-        print("Skipping gridded: results/gridded/unbuffered not found")
+        print("Skipping gridded: results/grids/no_buffers not found")
         return
 
-    files = [
-        "walk_pt_stops.gpkg",
-        "walk_schools.gpkg",
-        "walk_kindergarden.gpkg",
-        "bike_pt_stops.gpkg",
-        "bike_schools.gpkg",
-        "bike_kindergarden.gpkg",
+    # Source files use "kindergarden" (legacy); output uses "kindergartens" (correct)
+    file_map = [
+        ("walk_pt_stops.gpkg", "walk_pt_stops.geojson"),
+        ("walk_schools.gpkg", "walk_schools.geojson"),
+        ("walk_kindergarden.gpkg", "walk_kindergartens.geojson"),
+        ("bike_pt_stops.gpkg", "bike_pt_stops.geojson"),
+        ("bike_schools.gpkg", "bike_schools.geojson"),
+        ("bike_kindergarden.gpkg", "bike_kindergartens.geojson"),
     ]
 
-    for f in files:
-        p = gridded_dir / f
+    for src_name, out_name in file_map:
+        p = gridded_dir / src_name
         if p.exists():
             try:
                 gdf = gpd.read_file(p)
                 # Ensure travel_time_min exists (or travel_time)
                 if "travel_time_min" not in gdf.columns and "travel_time" in gdf.columns:
                     gdf["travel_time_min"] = gdf["travel_time"]
-                out_name = p.stem + ".geojson"
                 to_geojson(gdf, OUT_DIR / out_name)
-                print(f"  OK: {f} -> {out_name}")
+                print(f"  OK: {src_name} -> {out_name}")
             except Exception as e:
-                print(f"  FAIL: {f}: {e}")
+                print(f"  FAIL: {src_name}: {e}")
         else:
-            print(f"  Skip: {f} not found")
+            print(f"  Skip: {src_name} not found")
 
 
 def convert_networks() -> None:
     """Convert bike and walk network edge layers (LineString)."""
-    data_dir = PROJECT_ROOT / "data"
+    networks_dir = PROJECT_ROOT / "data" / "networks"
     for name in ["bike_network", "walk_network"]:
-        p = data_dir / f"{name}.gpkg"
+        p = networks_dir / f"{name}.gpkg"
         if not p.exists():
             print(f"  Skip: {name}.gpkg not found")
             continue
@@ -102,9 +102,9 @@ def convert_networks() -> None:
 
 def convert_destinations() -> None:
     """Convert destination point layers."""
-    dest_dir = PROJECT_ROOT / "data" / "destination_layers"
+    dest_dir = PROJECT_ROOT / "data" / "destinations"
     if not dest_dir.exists():
-        print("Skipping destinations: data/destination_layers not found")
+        print("Skipping destinations: data/destinations not found")
         return
 
     for name in ["pt_stops", "kindergartens", "schools"]:
@@ -122,9 +122,10 @@ def convert_destinations() -> None:
 
 def convert_boundary() -> None:
     """Convert study area boundary for context."""
+    boundaries_dir = PROJECT_ROOT / "data" / "boundaries"
     for cand in [
-        PROJECT_ROOT / "data" / "leithaland_4326.gpkg",
-        PROJECT_ROOT / "data" / "leithaland_4326_dissolved.shp",
+        boundaries_dir / "leithaland_4326.gpkg",
+        boundaries_dir / "leithaland_4326_dissolved.shp",
     ]:
         if cand.exists():
             try:
@@ -149,8 +150,7 @@ def main() -> None:
     convert_destinations()
     print("\nBoundary:")
     convert_boundary()
-    print("\nDone.")
-    print("To update GitHub Pages: run scripts/update_docs_for_github_pages.sh")
+    print("\nDone. GeoJSON files written to docs/data/")
 
 
 if __name__ == "__main__":

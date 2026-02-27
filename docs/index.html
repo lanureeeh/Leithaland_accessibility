@@ -134,8 +134,8 @@
   // Store layer groups and GeoJSON layers
   var accessibilityLayers = {};
   var accessibilityLayerIds = [
-    'walk_pt_stops', 'walk_schools', 'walk_kindergarden',
-    'bike_pt_stops', 'bike_schools', 'bike_kindergarden'
+    'walk_pt_stops', 'walk_schools', 'walk_kindergartens',
+    'bike_pt_stops', 'bike_schools', 'bike_kindergartens'
   ];
   var currentAccessibilityLayer = null;
 
@@ -170,7 +170,7 @@
               var props = feature.properties || {};
               var ttVal = props.travel_time_min != null ? props.travel_time_min : props.travel_time;
               var tt = ttVal != null ? parseFloat(ttVal).toFixed(1) : '—';
-              var labels = { pt_stops: 'Public Transit Stops', schools: 'Schools', kindergarden: 'Kindergarden' };
+              var labels = { pt_stops: 'Public Transit Stops', schools: 'Schools', kindergartens: 'Kindergartens' };
               var parts = id.split('_');
               var label = (parts[0] === 'walk' ? 'Walk' : 'Bike') + ' → ' + (labels[parts.slice(1).join('_')] || parts.slice(1).join(' '));
               layer.bindPopup('<strong>' + label + '</strong><br>Travel time: <strong>' + tt + ' min</strong>');
@@ -281,7 +281,7 @@
     html += '<i style="background:#4CAF50;width:24px;height:3px;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Bike network<br>';
     html += '<strong style="margin-top:6px;display:block;">Destinations</strong>';
     html += '<i style="background:#9C27B0;border:1px solid #333;width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Public Transit Stops<br>';
-    html += '<i style="background:#FF9800;border:1px solid #333;width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Kindergarden<br>';
+    html += '<i style="background:#FF9800;border:1px solid #333;width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Kindergartens<br>';
     html += '<i style="background:#00BCD4;border:1px solid #333;width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;"></i> Schools';
     html += '</div>';
     legendDiv.innerHTML = html;
@@ -299,10 +299,10 @@
       <div class="section-title">Accessibility (travel time to nearest)</div>
       <label><input type="radio" name="acc" id="acc-walk-pt"> Walk → Public Transit Stops</label>
       <label><input type="radio" name="acc" id="acc-walk-schools"> Walk → Schools</label>
-      <label><input type="radio" name="acc" id="acc-walk-kindergarden"> Walk → Kindergarden</label>
+      <label><input type="radio" name="acc" id="acc-walk-kindergartens"> Walk → Kindergartens</label>
       <label><input type="radio" name="acc" id="acc-bike-pt"> Bike → Public Transit Stops</label>
       <label><input type="radio" name="acc" id="acc-bike-schools"> Bike → Schools</label>
-      <label><input type="radio" name="acc" id="acc-bike-kindergarden"> Bike → Kindergarden</label>
+      <label><input type="radio" name="acc" id="acc-bike-kindergartens"> Bike → Kindergartens</label>
       <div class="layer-divider"></div>
       <div class="section-title">Networks</div>
       <label><input type="checkbox" id="walk-net"> Walk network</label>
@@ -322,8 +322,8 @@
 
   // Wire up accessibility radio buttons
   setTimeout(function() {
-    var accIds = ['walk_pt_stops', 'walk_schools', 'walk_kindergarden', 'bike_pt_stops', 'bike_schools', 'bike_kindergarden'];
-    var radioIds = ['acc-walk-pt', 'acc-walk-schools', 'acc-walk-kindergarden', 'acc-bike-pt', 'acc-bike-schools', 'acc-bike-kindergarden'];
+    var accIds = ['walk_pt_stops', 'walk_schools', 'walk_kindergartens', 'bike_pt_stops', 'bike_schools', 'bike_kindergartens'];
+    var radioIds = ['acc-walk-pt', 'acc-walk-schools', 'acc-walk-kindergartens', 'acc-bike-pt', 'acc-bike-schools', 'acc-bike-kindergartens'];
     radioIds.forEach(function(rid, i) {
       var r = document.getElementById(rid);
       if (r) r.addEventListener('change', function() {
