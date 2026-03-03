@@ -1,0 +1,20 @@
+About the Mobility Project
+===========================
+
+This project helps understand how easy it is for people to reach important places in Austria—by walking or cycling.
+
+LEITHALAND MAP
+--------------
+We built an interactive map for the Leithaland region that shows how long it takes to reach:
+  • Bus and train stops (public transport)
+  • Schools
+  • Kindergartens
+
+You can see travel times both for walking and for cycling. This helps planners and residents see which areas are well connected and which might need better access.
+
+You can view the map online at:
+  https://lanureeeh.github.io/Leithaland_accessibility/
+
+EASTERN AUSTRIA TRANSIT DATA
+----------------------------
+The second part combines timetable data from different transport providers in Eastern Austria (VOR and ÖBB) into one shared dataset. This makes it easier to analyse transit across the whole region.
