@@ -2,9 +2,19 @@
 
 Interactive map of travel times to **Public Transit Stops**, **schools**, and **kindergartens** by walking and cycling in the Leithaland KLAR! region (Austria).
 
+> This folder is part of the **Mobility** project. Run scripts from the parent directory (`Mobility/`).
+
 ## Live map
 
 **https://lanureeeh.github.io/Leithaland_accessibility/**
+
+## Data pipeline
+
+| Step | Command | Output |
+|------|---------|--------|
+| 1. Extract OSM networks | `python extract_networks.py` (from `Mobility/`) | `data/networks/walk_network.gpkg`, `bike_network.gpkg` |
+| 2. Compute travel times | `python snap_origins_and_destinations.py` (from `Mobility/`) | `results/points/*.gpkg`, `results/grids/no_buffers/*.gpkg` |
+| 3. Convert for web map | `python scripts/convert_gpkg_to_geojson.py` (from `Leithaland/`) | `docs/data/*.geojson` |
 
 ## Project structure
 
@@ -64,5 +74,6 @@ python -m http.server 8000
 
 ## Requirements
 
-- **Python 3** with `geopandas` for conversion: `pip install geopandas`
-- Or **GDAL** (`ogr2ogr`) for the shell script alternative
+- **Python 3.10+** with dependencies from parent project: `pip install -r ../requirements.txt`
+- **geopandas** for GeoJSON conversion
+- **GDAL** (`ogr2ogr`) optional – for shell script alternative
